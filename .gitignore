@@ -1,0 +1,9 @@
+.vscode
+agy_continue.bat
+context_tomorrow.md
+implementation_plan.md
+TeacherMate.txt
+backend/venv/*
+backend/__pycache__/*
+register.jpg
+columns.txt
