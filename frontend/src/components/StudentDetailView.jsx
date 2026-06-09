@@ -10,15 +10,27 @@ const spokenEnglishMap = {
   e: 'Excellent (E)'
 };
 
+const getWorkingDaysDefault = (monthIndex, year = new Date().getFullYear()) => {
+  let days = 0;
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dayOfWeek = new Date(year, monthIndex, d).getDay();
+    if (dayOfWeek !== 0) { // 0 is Sunday
+      days++;
+    }
+  }
+  return days;
+};
+
 export default function StudentDetailView({ studentId, onBack, token, onLogout }) {
   const [student, setStudent] = useState(null);
   const [combination, setCombination] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Edit Modal States
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeModalTab, setActiveModalTab] = useState('basic'); // 'basic', 'main_eval', 'language', 'creative', 'slip_test'
+  // Edit Mode States
+  const [editMode, setEditMode] = useState(false);
+  const [editTab, setEditTab] = useState('roster'); // 'roster' or 'attendance'
   const [submitting, setSubmitting] = useState(false);
   
   const initialFormData = {
@@ -32,7 +44,9 @@ export default function StudentDetailView({ studentId, onBack, token, onLogout }
     r1: '', p1: '', cw1: '', r2: '', p2: '', cw2: '', r3: '', p3: '', cw3: '',
     listening: '', speaking: '', reading: '', writing: '',
     st1: '', st2: '', st3: '', st4: '', st5: '', st6: '', st7: '', st8: '', st9: '', st10: '',
-    remarks: ''
+    remarks: '',
+    att_jan: '', att_feb: '', att_mar: '', att_apr: '', att_may: '', att_jun: '',
+    att_jul: '', att_aug: '', att_sep: '', att_oct: '', att_nov: '', att_dec: ''
   };
   const [formData, setFormData] = useState(initialFormData);
 
@@ -97,7 +111,7 @@ export default function StudentDetailView({ studentId, onBack, token, onLogout }
       .catch((err) => alert(err.message));
   };
 
-  const openEditModal = () => {
+  const enterEditMode = (tab = 'roster') => {
     if (!student) return;
     setFormData({
       name: student.name || '',
@@ -149,10 +163,22 @@ export default function StudentDetailView({ studentId, onBack, token, onLogout }
       st8: student.st8 !== null && student.st8 !== undefined ? student.st8 : '',
       st9: student.st9 !== null && student.st9 !== undefined ? student.st9 : '',
       st10: student.st10 !== null && student.st10 !== undefined ? student.st10 : '',
-      remarks: student.remarks !== null && student.remarks !== undefined ? student.remarks : ''
+      remarks: student.remarks !== null && student.remarks !== undefined ? student.remarks : '',
+      att_jan: student.att_jan !== null && student.att_jan !== undefined ? student.att_jan : '',
+      att_feb: student.att_feb !== null && student.att_feb !== undefined ? student.att_feb : '',
+      att_mar: student.att_mar !== null && student.att_mar !== undefined ? student.att_mar : '',
+      att_apr: student.att_apr !== null && student.att_apr !== undefined ? student.att_apr : '',
+      att_may: student.att_may !== null && student.att_may !== undefined ? student.att_may : '',
+      att_jun: student.att_jun !== null && student.att_jun !== undefined ? student.att_jun : '',
+      att_jul: student.att_jul !== null && student.att_jul !== undefined ? student.att_jul : '',
+      att_aug: student.att_aug !== null && student.att_aug !== undefined ? student.att_aug : '',
+      att_sep: student.att_sep !== null && student.att_sep !== undefined ? student.att_sep : '',
+      att_oct: student.att_oct !== null && student.att_oct !== undefined ? student.att_oct : '',
+      att_nov: student.att_nov !== null && student.att_nov !== undefined ? student.att_nov : '',
+      att_dec: student.att_dec !== null && student.att_dec !== undefined ? student.att_dec : '',
     });
-    setActiveModalTab('basic');
-    setIsModalOpen(true);
+    setEditTab(tab);
+    setEditMode(true);
   };
 
   const handleSubmit = (e) => {
@@ -213,7 +239,19 @@ export default function StudentDetailView({ studentId, onBack, token, onLogout }
       st8: parseVal(formData.st8),
       st9: parseVal(formData.st9),
       st10: parseVal(formData.st10),
-      remarks: formData.remarks !== '' ? formData.remarks : null
+      remarks: formData.remarks !== '' ? formData.remarks : null,
+      att_jan: parseVal(formData.att_jan),
+      att_feb: parseVal(formData.att_feb),
+      att_mar: parseVal(formData.att_mar),
+      att_apr: parseVal(formData.att_apr),
+      att_may: parseVal(formData.att_may),
+      att_jun: parseVal(formData.att_jun),
+      att_jul: parseVal(formData.att_jul),
+      att_aug: parseVal(formData.att_aug),
+      att_sep: parseVal(formData.att_sep),
+      att_oct: parseVal(formData.att_oct),
+      att_nov: parseVal(formData.att_nov),
+      att_dec: parseVal(formData.att_dec),
     };
 
     fetch(`${API_BASE}/students/${studentId}`, {
@@ -234,7 +272,7 @@ export default function StudentDetailView({ studentId, onBack, token, onLogout }
       })
       .then((savedStudent) => {
         setStudent(savedStudent);
-        setIsModalOpen(false);
+        setEditMode(false);
         setSubmitting(false);
       })
       .catch((err) => {
@@ -299,6 +337,357 @@ export default function StudentDetailView({ studentId, onBack, token, onLogout }
     );
   };
 
+  const renderEditableDetailCard = (colKey, label, highlight = false, isSpokenEnglish = false, maxVal = 100) => {
+    return (
+      <div className={`p-2.5 rounded-xl border text-center transition-all ${
+        highlight 
+          ? 'bg-indigo-50/60 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-500/20' 
+          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800/60'
+      }`}>
+        <span className="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate" title={label}>{label}</span>
+        <div className="mt-1.5">
+          {isSpokenEnglish ? (
+            <select
+              value={formData[colKey]}
+              onChange={(e) => setFormData({ ...formData, [colKey]: e.target.value })}
+              className="w-full px-1 py-0.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded text-[10px] font-semibold text-center text-slate-850 dark:text-slate-200"
+            >
+              <option value="">N/A</option>
+              <option value="vp">Very Poor (VP)</option>
+              <option value="p">Poor (P)</option>
+              <option value="a">Average (A)</option>
+              <option value="aa">Above Average (AA)</option>
+              <option value="g">Good (G)</option>
+              <option value="e">Excellent (E)</option>
+            </select>
+          ) : (
+            <input
+              type="number"
+              min="0"
+              max={maxVal}
+              placeholder="N/A"
+              value={formData[colKey]}
+              onChange={(e) => setFormData({ ...formData, [colKey]: e.target.value })}
+              className="w-full px-1.5 py-0.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded text-xs font-mono text-center text-slate-850 dark:text-slate-200"
+            />
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderEditableDetailCardWithHistory = (colKey, prevKey, prev2Key, label, highlight = false) => {
+    return (
+      <div className={`p-2.5 rounded-xl border text-center transition-all ${
+        highlight 
+          ? 'bg-indigo-50/60 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-500/20' 
+          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800/60'
+      }`}>
+        <span className="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate mb-1" title={label}>{label}</span>
+        
+        <div className="flex flex-col gap-1.5">
+          {/* Current Year */}
+          <div>
+            <span className="block text-[7px] text-slate-400 uppercase font-bold text-left">Current</span>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              placeholder="N/A"
+              value={formData[colKey]}
+              onChange={(e) => setFormData({ ...formData, [colKey]: e.target.value })}
+              className="w-full px-1 py-0.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded text-xs font-mono text-center text-slate-850 dark:text-slate-200"
+            />
+          </div>
+          {/* Previous Year */}
+          <div>
+            <span className="block text-[7px] text-slate-400 uppercase font-bold text-left">Prev Yr</span>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              placeholder="N/A"
+              value={formData[prevKey]}
+              onChange={(e) => setFormData({ ...formData, [prevKey]: e.target.value })}
+              className="w-full px-1 py-0.5 bg-slate-50/60 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded text-xs font-mono text-center text-slate-550 dark:text-slate-400"
+            />
+          </div>
+          {/* 2 Years Ago */}
+          <div>
+            <span className="block text-[7px] text-slate-400 uppercase font-bold text-left">2 Yrs Ago</span>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              placeholder="N/A"
+              value={formData[prev2Key]}
+              onChange={(e) => setFormData({ ...formData, [prev2Key]: e.target.value })}
+              className="w-full px-1 py-0.5 bg-slate-50/60 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded text-xs font-mono text-center text-slate-550 dark:text-slate-400"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  if (editMode) {
+    return (
+      <div className="max-w-7xl w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm dark:shadow-xl p-8 mx-auto transition-all">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Header Action Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5 mb-6">
+            <div>
+              <h2 className="text-lg font-bold text-slate-850 dark:text-white tracking-tight">Edit Student Profile</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Updating values for <span className="font-bold text-indigo-600 dark:text-indigo-400">{student.name}</span>
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-3 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setEditMode(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-650 dark:text-slate-400 border border-slate-200 dark:border-slate-750 rounded-xl text-xs font-semibold transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/10 transition-all disabled:opacity-50"
+              >
+                {submitting ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+
+          {/* Toggle between Roster and Attendance Panels */}
+          <div className="flex bg-slate-100 dark:bg-slate-850 p-1 rounded-xl border border-slate-200 dark:border-slate-800/85 self-start mb-6 w-fit">
+            <button
+              type="button"
+              onClick={() => setEditTab('roster')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                editTab === 'roster'
+                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200/50 dark:border-slate-800/50'
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}
+            >
+              📋 Roster Profile
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditTab('attendance')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                editTab === 'attendance'
+                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200/50 dark:border-slate-800/50'
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}
+            >
+              📅 Attendance Profile
+            </button>
+          </div>
+
+          {editTab === 'roster' ? (
+            /* Panel A: Roster Edit View */
+            <div className="flex flex-col md:flex-row gap-8 items-start animate-fade-in">
+              {/* Left Column: Name & Roll inputs */}
+              <div className="w-full md:w-1/5 flex flex-col items-center md:items-start text-center md:text-left flex-shrink-0 md:border-r border-slate-200 dark:border-slate-800 md:pr-6">
+                <div className="w-full space-y-4">
+                  <div>
+                    <label className="block text-[8px] font-bold uppercase text-slate-450 dark:text-slate-500 tracking-wider mb-1">Student Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded-xl text-xs font-bold text-slate-850 dark:text-slate-200 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[8px] font-bold uppercase text-slate-450 dark:text-slate-500 tracking-wider mb-1">Roll Number</label>
+                    <input
+                      type="number"
+                      required
+                      value={formData.roll_no}
+                      onChange={(e) => setFormData({ ...formData, roll_no: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded-xl text-xs font-mono font-bold text-slate-850 dark:text-slate-200 transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Inline Editable Grid */}
+              <div className="flex-1 w-full space-y-6">
+                {/* Main Evaluations */}
+                <div className="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 border-b border-slate-200 dark:border-slate-800/80 pb-2 mb-4">
+                    Main Evaluations (Current, Prev Year, 2 Years Ago)
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+                    {renderEditableDetailCardWithHistory('fa1', 'prev_fa1', 'prev2_fa1', 'FA 1')}
+                    {renderEditableDetailCardWithHistory('fa2', 'prev_fa2', 'prev2_fa2', 'FA 2')}
+                    {renderEditableDetailCardWithHistory('sa1', 'prev_sa1', 'prev2_sa1', 'SA 1', true)}
+                    {renderEditableDetailCardWithHistory('fa3', 'prev_fa3', 'prev2_fa3', 'FA 3')}
+                    {renderEditableDetailCardWithHistory('fa4', 'prev_fa4', 'prev2_fa4', 'FA 4')}
+                    {renderEditableDetailCardWithHistory('sa2', 'prev_sa2', 'prev2_sa2', 'SA 2', true)}
+                  </div>
+                </div>
+
+                {/* Grammar & Vocabulary */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  {/* Grammar */}
+                  <div className="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 border-b border-slate-200 dark:border-slate-800/80 pb-2 mb-4">
+                      Grammar Scores (out of 50)
+                    </h4>
+                    <div className="grid grid-cols-3 gap-3">
+                      {renderEditableDetailCard('g1', 'G 1', false, false, 50)}
+                      {renderEditableDetailCard('g2', 'G 2', false, false, 50)}
+                      {renderEditableDetailCard('g3', 'G 3', false, false, 50)}
+                    </div>
+                  </div>
+
+                  {/* Vocabulary */}
+                  <div className="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400 border-b border-slate-200 dark:border-slate-800/80 pb-2 mb-4">
+                      Vocabulary Scores (out of 50)
+                    </h4>
+                    <div className="grid grid-cols-3 gap-3">
+                      {renderEditableDetailCard('v1', 'V 1', false, false, 50)}
+                      {renderEditableDetailCard('v2', 'V 2', false, false, 50)}
+                      {renderEditableDetailCard('v3', 'V 3', false, false, 50)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Creative Work */}
+                <div className="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 border-b border-slate-200 dark:border-slate-800/80 pb-2 mb-4">
+                    Creative Work Ratings
+                  </h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    {renderEditableDetailCard('r1', 'Reflection 1')}
+                    {renderEditableDetailCard('p1', 'Project 1')}
+                    {renderEditableDetailCard('cw1', 'Creative Work 1')}
+                    {renderEditableDetailCard('r2', 'Reflection 2')}
+                    {renderEditableDetailCard('p2', 'Project 2')}
+                    {renderEditableDetailCard('cw2', 'Creative Work 2')}
+                    {renderEditableDetailCard('r3', 'Reflection 3')}
+                    {renderEditableDetailCard('p3', 'Project 3')}
+                    {renderEditableDetailCard('cw3', 'Creative Work 3')}
+                  </div>
+                </div>
+
+                {/* Spoken English */}
+                <div className="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 border-b border-slate-200 dark:border-slate-800/80 pb-2 mb-4">
+                    Spoken English Ratings
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {renderEditableDetailCard('listening', 'Listening', false, true)}
+                    {renderEditableDetailCard('speaking', 'Speaking', false, true)}
+                    {renderEditableDetailCard('reading', 'Reading', false, true)}
+                    {renderEditableDetailCard('writing', 'Writing', false, true)}
+                  </div>
+                </div>
+
+                {/* Slip Tests */}
+                <div className="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 border-b border-slate-200 dark:border-slate-800/80 pb-2 mb-4">
+                    Slip Tests (out of 25)
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    {Array.from({ length: 10 }).map((_, idx) => {
+                      const key = `st${idx + 1}`;
+                      return (
+                        <div key={key}>
+                          {renderEditableDetailCard(key, `Slip Test ${idx + 1}`, false, false, 25)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Remarks */}
+                <div className="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-650 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800/80 pb-2 mb-4">
+                    Teacher Remarks
+                  </h4>
+                  <textarea
+                    rows="4"
+                    placeholder="Enter observations, comments, or notes about student's overall performance..."
+                    value={formData.remarks}
+                    onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded-xl text-xs text-slate-850 dark:text-slate-200 transition-all font-semibold resize-y"
+                  />
+                </div>
+
+              </div>
+            </div>
+          ) : (
+            /* Panel B: Attendance Edit View */
+            <div className="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 animate-fade-in">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400 border-b border-slate-200 dark:border-slate-800/80 pb-3 mb-4">
+                Monthly Attendance Records
+              </h4>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-550">
+                      <th className="p-3">Month</th>
+                      <th className="p-3 text-center">Class Working Days</th>
+                      <th className="p-3 text-center">Days Attended (Student)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-850 text-xs font-medium text-slate-700 dark:text-slate-300">
+                    {['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].map((m, idx) => {
+                      const monthNames = {
+                        jan: 'January', feb: 'February', mar: 'March', apr: 'April', may: 'May',
+                        jun: 'June', jul: 'July', aug: 'August', sep: 'September', oct: 'October', nov: 'November', dec: 'December'
+                      };
+                      
+                      const classDays = combination[`working_days_${m}`] !== null && combination[`working_days_${m}`] !== undefined
+                        ? combination[`working_days_${m}`]
+                        : getWorkingDaysDefault(idx);
+
+                      return (
+                        <tr key={m} className="hover:bg-slate-50/40 dark:hover:bg-slate-800/20">
+                          <td className="p-3 font-semibold">{monthNames[m]}</td>
+                          <td className="p-3 text-center font-mono text-slate-500 dark:text-slate-400">{classDays}</td>
+                          <td className="p-3 flex justify-center">
+                            <input
+                              type="number"
+                              min="0"
+                              max={classDays}
+                              placeholder="N/A"
+                              value={formData[`att_${m}`]}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val !== '' && parseInt(val) > classDays) {
+                                  alert(`Attendance cannot exceed total working days (${classDays}) for ${monthNames[m]}`);
+                                  return;
+                                }
+                                setFormData({ ...formData, [`att_${m}`]: val });
+                              }}
+                              className="w-24 px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 hover:border-slate-305 dark:hover:border-slate-750 focus:border-indigo-500 focus:outline-none rounded-lg text-xs font-mono text-center text-slate-850 dark:text-slate-200"
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+        </form>
+      </div>
+    );
+  }
+
+  // --- Read-only Mode Layout ---
   return (
     <div className="max-w-7xl w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm dark:shadow-xl p-8 mx-auto transition-all">
       {/* Detail Header & Navigation */}
@@ -306,13 +695,13 @@ export default function StudentDetailView({ studentId, onBack, token, onLogout }
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:hover:bg-slate-805 border border-slate-200 dark:border-slate-750 text-slate-750 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white rounded-xl text-xs font-semibold transition-all active:scale-[0.98]"
+            className="flex items-center gap-2 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:hover:bg-slate-805 border border-slate-200 dark:border-slate-750 text-slate-755 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white rounded-xl text-xs font-semibold transition-all active:scale-[0.98]"
           >
             ← Back to Student Table
           </button>
           
           <button
-            onClick={openEditModal}
+            onClick={() => enterEditMode('roster')}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/10 transition-all active:scale-[0.98]"
           >
             ✏️ Edit Profile
@@ -333,20 +722,10 @@ export default function StudentDetailView({ studentId, onBack, token, onLogout }
 
       {/* Profile Detail Grid */}
       <div className="flex flex-col md:flex-row gap-8 items-start">
-        {/* Left Column: Avatar & Name */}
-        <div className="w-full md:w-1/5 flex flex-col items-center text-center flex-shrink-0">
-          <div className="relative group">
-            {/* Dashed photo border */}
-            <div className="w-36 h-36 bg-slate-50 dark:bg-slate-950 border-2 border-dashed border-slate-300 dark:border-slate-800 group-hover:border-indigo-500/40 rounded-2xl flex items-center justify-center text-slate-400 dark:text-slate-400 text-[11px] font-semibold mb-4 transition-all">
-              Photo Box
-            </div>
-            {/* Visual indicator tag */}
-            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 font-bold">
-              Placeholder
-            </span>
-          </div>
-          <h3 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight mt-3">{student.name}</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-semibold">Roll No: #{student.roll_no}</p>
+        {/* Left Column: Student Details */}
+        <div className="w-full md:w-1/5 flex flex-col items-center md:items-start text-center md:text-left flex-shrink-0 md:border-r border-slate-200 dark:border-slate-800 md:pr-6">
+          <h3 className="text-2xl font-extrabold text-slate-850 dark:text-white tracking-tight">{student.name}</h3>
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-slate-500 mt-2">Roll No: #{student.roll_no}</p>
         </div>
 
         {/* Right Column: Database Fields / Academic Profile */}
@@ -473,7 +852,7 @@ export default function StudentDetailView({ studentId, onBack, token, onLogout }
                           {percentage ? `${percentage}%` : 'N/A'}
                         </div>
                         <div>
-                          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-505 uppercase tracking-wider block">Overall Percentage</span>
+                          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-wider block">Overall Percentage</span>
                           <span className="text-xs font-bold text-slate-850 dark:text-white block mt-0.5">
                             {totalWorking > 0 
                               ? `${totalAttended} / ${totalWorking} Days`
@@ -516,364 +895,10 @@ export default function StudentDetailView({ studentId, onBack, token, onLogout }
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-650 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800/80 pb-2 mb-4">
               Teacher Remarks
             </h4>
-            <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 p-4 rounded-xl shadow-sm min-h-[100px] text-xs text-slate-750 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 p-4 rounded-xl shadow-sm min-h-[100px] text-xs text-slate-755 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
               {student.remarks ? student.remarks : <span className="text-slate-400 dark:text-slate-500 italic">No remarks entered yet.</span>}
             </div>
           </div>
-
-          {/* Edit Student Modal */}
-          {isModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-fade-in">
-              <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6 relative text-left">
-                {/* Close Button */}
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="absolute right-4 top-4 text-slate-400 dark:text-slate-505 hover:text-slate-655 dark:hover:text-slate-200 text-lg transition-colors"
-                >
-                  ✕
-                </button>
-
-                {/* Modal Title */}
-                <h3 className="text-base font-bold text-slate-905 dark:text-white mb-1">
-                  Edit Student Profile
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
-                  Update student details and academic evaluations.
-                </p>
-
-                {/* Modal Tab Headers */}
-                <div className="flex border-b border-slate-100 dark:border-slate-800 mb-5 overflow-x-auto scrollbar-none gap-2">
-                  {[
-                    { id: 'basic', label: 'Basic Info' },
-                    { id: 'main_eval', label: 'Main Eval' },
-                    { id: 'language', label: 'Grammar/Vocab' },
-                    { id: 'creative', label: 'Creative Work' },
-                    { id: 'spoken_english', label: 'Spoken English' },
-                    { id: 'slip_test', label: 'Slip Tests' },
-                    { id: 'remarks', label: 'Remarks' }
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setActiveModalTab(tab.id)}
-                      className={`px-3 py-2 text-xs font-bold whitespace-nowrap border-b-2 transition-all -mb-px ${
-                        activeModalTab === tab.id
-                          ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                          : 'border-transparent text-slate-500 dark:text-slate-450 hover:text-slate-700'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Form */}
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  {/* Tab 1: Basic Information */}
-                  {activeModalTab === 'basic' && (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-1.5">
-                          Student Full Name
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded-xl text-xs text-slate-800 dark:text-slate-200 transition-all font-semibold"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-1.5">
-                          Assigned Roll Number
-                        </label>
-                        <input
-                          type="number"
-                          required
-                          value={formData.roll_no}
-                          onChange={(e) => setFormData({ ...formData, roll_no: e.target.value })}
-                          className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded-xl text-xs text-slate-800 dark:text-slate-200 transition-all font-semibold"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Tab 2: Main Evaluation */}
-                  {activeModalTab === 'main_eval' && (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-12 gap-3 text-center border-b border-slate-100 dark:border-slate-800 pb-1">
-                        <div className="col-span-3 text-left text-[9px] font-bold uppercase text-slate-400 dark:text-slate-505 tracking-wider">Assessment (out of 100)</div>
-                        <div className="col-span-3 text-[9px] font-bold uppercase text-slate-400 dark:text-slate-505 tracking-wider">Current Year</div>
-                        <div className="col-span-3 text-[9px] font-bold uppercase text-slate-400 dark:text-slate-505 tracking-wider">Previous Year</div>
-                        <div className="col-span-3 text-[9px] font-bold uppercase text-slate-400 dark:text-slate-505 tracking-wider">2 Years Ago</div>
-                      </div>
-                      <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-                        {[
-                          { key: 'fa1', prevKey: 'prev_fa1', prev2Key: 'prev2_fa1', label: 'FA1' },
-                          { key: 'fa2', prevKey: 'prev_fa2', prev2Key: 'prev2_fa2', label: 'FA2' },
-                          { key: 'sa1', prevKey: 'prev_sa1', prev2Key: 'prev2_sa1', label: 'SA1', isBold: true },
-                          { key: 'fa3', prevKey: 'prev_fa3', prev2Key: 'prev2_fa3', label: 'FA3' },
-                          { key: 'fa4', prevKey: 'prev_fa4', prev2Key: 'prev2_fa4', label: 'FA4' },
-                          { key: 'sa2', prevKey: 'prev_sa2', prev2Key: 'prev2_sa2', label: 'SA2', isBold: true }
-                        ].map((field) => (
-                          <div key={field.key} className="grid grid-cols-12 gap-3 items-center">
-                            <div className={`col-span-3 text-xs font-semibold ${field.isBold ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-700 dark:text-slate-300'}`}>
-                              {field.label}
-                            </div>
-                            <div className="col-span-3">
-                              <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                placeholder="N/A"
-                                value={formData[field.key]}
-                                onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                                className="w-full px-2 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded-lg text-xs font-mono text-center text-slate-850 dark:text-slate-200 transition-all"
-                              />
-                            </div>
-                            <div className="col-span-3">
-                              <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                placeholder="N/A"
-                                value={formData[field.prevKey]}
-                                onChange={(e) => setFormData({ ...formData, [field.prevKey]: e.target.value })}
-                                className="w-full px-2 py-1 bg-slate-50/60 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded-lg text-xs font-mono text-center text-slate-505 dark:text-slate-400 transition-all"
-                              />
-                            </div>
-                            <div className="col-span-3">
-                              <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                placeholder="N/A"
-                                value={formData[field.prev2Key]}
-                                onChange={(e) => setFormData({ ...formData, [field.prev2Key]: e.target.value })}
-                                className="w-full px-2 py-1 bg-slate-50/60 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded-lg text-xs font-mono text-center text-slate-505 dark:text-slate-400 transition-all"
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Tab 3: Language Skills (Grammar & Vocab) */}
-                  {activeModalTab === 'language' && (
-                    <div className="space-y-4 max-h-[260px] overflow-y-auto pr-1">
-                      {/* Grammar */}
-                      <div>
-                        <h4 className="text-[10px] font-extrabold uppercase tracking-wide text-indigo-500 dark:text-indigo-400 mb-2">Grammar Sections (out of 50)</h4>
-                        <div className="grid grid-cols-12 gap-3 text-center border-b border-slate-100 dark:border-slate-800 pb-1 mb-2">
-                          <div className="col-span-8 text-left text-[9px] font-bold uppercase text-slate-450 dark:text-slate-400 tracking-wider">Section</div>
-                          <div className="col-span-4 text-[9px] font-bold uppercase text-slate-450 dark:text-slate-400 tracking-wider">Score</div>
-                        </div>
-                        <div className="space-y-2">
-                          {[
-                            { key: 'g1', label: 'Grammar 1' },
-                            { key: 'g2', label: 'Grammar 2' },
-                            { key: 'g3', label: 'Grammar 3' }
-                          ].map((field) => (
-                            <div key={field.key} className="grid grid-cols-12 gap-3 items-center">
-                              <div className="col-span-8 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                {field.label}
-                              </div>
-                              <div className="col-span-4">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="50"
-                                  placeholder="N/A"
-                                  value={formData[field.key]}
-                                  onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                                  className="w-full px-2 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded-lg text-xs font-mono text-center text-slate-850 dark:text-slate-200 transition-all"
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Vocabulary */}
-                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
-                        <h4 className="text-[10px] font-extrabold uppercase tracking-wide text-teal-500 dark:text-teal-400 mb-2">Vocabulary Sections (out of 50)</h4>
-                        <div className="grid grid-cols-12 gap-3 text-center border-b border-slate-100 dark:border-slate-800 pb-1 mb-2">
-                          <div className="col-span-8 text-left text-[9px] font-bold uppercase text-slate-450 dark:text-slate-400 tracking-wider">Section</div>
-                          <div className="col-span-4 text-[9px] font-bold uppercase text-slate-450 dark:text-slate-400 tracking-wider">Score</div>
-                        </div>
-                        <div className="space-y-2">
-                          {[
-                            { key: 'v1', label: 'Vocabulary 1' },
-                            { key: 'v2', label: 'Vocabulary 2' },
-                            { key: 'v3', label: 'Vocabulary 3' }
-                          ].map((field) => (
-                            <div key={field.key} className="grid grid-cols-12 gap-3 items-center">
-                              <div className="col-span-8 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                {field.label}
-                              </div>
-                              <div className="col-span-4">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="50"
-                                  placeholder="N/A"
-                                  value={formData[field.key]}
-                                  onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                                  className="w-full px-2 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded-lg text-xs font-mono text-center text-slate-850 dark:text-slate-200 transition-all"
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Tab 4: Creative Work */}
-                  {activeModalTab === 'creative' && (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-12 gap-3 text-center border-b border-slate-100 dark:border-slate-800 pb-1">
-                        <div className="col-span-8 text-left text-[9px] font-bold uppercase text-slate-450 dark:text-slate-505 tracking-wider">Creative Metric (out of 100)</div>
-                        <div className="col-span-4 text-[9px] font-bold uppercase text-slate-455 dark:text-slate-505 tracking-wider">Score</div>
-                      </div>
-                      <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-                        {[
-                          { key: 'r1', label: 'Reflection 1' },
-                          { key: 'p1', label: 'Project 1' },
-                          { key: 'cw1', label: 'Creative Work 1' },
-                          { key: 'r2', label: 'Reflection 2' },
-                          { key: 'p2', label: 'Project 2' },
-                          { key: 'cw2', label: 'Creative Work 2' },
-                          { key: 'r3', label: 'Reflection 3' },
-                          { key: 'p3', label: 'Project 3' },
-                          { key: 'cw3', label: 'Creative Work 3' }
-                        ].map((field) => (
-                          <div key={field.key} className="grid grid-cols-12 gap-3 items-center">
-                            <div className="col-span-8 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                              {field.label}
-                            </div>
-                            <div className="col-span-4">
-                              <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                placeholder="N/A"
-                                value={formData[field.key]}
-                                onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                                className="w-full px-2 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded-lg text-xs font-mono text-center text-slate-850 dark:text-slate-200 transition-all"
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Tab: Spoken English */}
-                  {activeModalTab === 'spoken_english' && (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-12 gap-3 text-center border-b border-slate-100 dark:border-slate-800 pb-1">
-                        <div className="col-span-8 text-left text-[9px] font-bold uppercase text-slate-450 dark:text-slate-555 tracking-wider">Metric</div>
-                        <div className="col-span-4 text-[9px] font-bold uppercase text-slate-455 dark:text-slate-555 tracking-wider">Rating</div>
-                      </div>
-                      <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-                        {[
-                          { key: 'listening', label: 'Listening' },
-                          { key: 'speaking', label: 'Speaking' },
-                          { key: 'reading', label: 'Reading' },
-                          { key: 'writing', label: 'Writing' }
-                        ].map((field) => (
-                          <div key={field.key} className="grid grid-cols-12 gap-3 items-center">
-                            <div className="col-span-8 text-xs font-semibold text-slate-700 dark:text-slate-350">
-                              {field.label}
-                            </div>
-                            <div className="col-span-4">
-                              <select
-                                value={formData[field.key]}
-                                onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                                className="w-full px-2 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded-lg text-xs text-slate-850 dark:text-slate-200 transition-all font-semibold"
-                              >
-                                <option value="">N/A</option>
-                                <option value="vp">Very Poor (VP)</option>
-                                <option value="p">Poor (P)</option>
-                                <option value="a">Average (A)</option>
-                                <option value="aa">Above Average (AA)</option>
-                                <option value="g">Good (G)</option>
-                                <option value="e">Excellent (E)</option>
-                              </select>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Tab 5: Slip Tests */}
-                  {activeModalTab === 'slip_test' && (
-                    <div className="grid grid-cols-5 gap-3 max-h-[260px] overflow-y-auto pr-1">
-                      {Array.from({ length: 10 }).map((_, idx) => {
-                        const field = `st${idx + 1}`;
-                        return (
-                          <div key={field} className="text-center">
-                            <label className="block text-[9px] font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-1 truncate" title={`Slip Test ${idx + 1}`}>
-                              Slip Test {idx + 1}
-                            </label>
-                            <input
-                              type="number"
-                              min="0"
-                              max="25"
-                              placeholder="N/A"
-                              value={formData[field]}
-                              onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
-                              className="w-full px-2 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded-lg text-xs font-mono text-center text-slate-855 dark:text-slate-200 transition-all"
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Tab: Remarks */}
-                  {activeModalTab === 'remarks' && (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-1.5">
-                          Teacher Remarks / Notes
-                        </label>
-                        <textarea
-                          rows="6"
-                          placeholder="Enter observations, comments, or notes about student's overall performance..."
-                          value={formData.remarks}
-                          onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-                          className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded-xl text-xs text-slate-800 dark:text-slate-200 transition-all font-semibold resize-y"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800/80 mt-6">
-                    <button
-                      type="button"
-                      onClick={() => setIsModalOpen(false)}
-                      className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-650 dark:text-slate-400 border border-slate-200 dark:border-slate-750 rounded-xl text-xs font-semibold transition-all"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/10 transition-all disabled:opacity-50"
-                    >
-                      {submitting ? 'Saving...' : 'Update details'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
 
         </div>
       </div>
