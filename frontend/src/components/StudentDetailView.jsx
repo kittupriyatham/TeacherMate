@@ -489,35 +489,33 @@ export default function StudentDetailView({ studentId, onBack, token, onLogout }
 
           {editTab === 'roster' ? (
             /* Panel A: Roster Edit View */
-            <div className="flex flex-col md:flex-row gap-8 items-start animate-fade-in">
-              {/* Left Column: Name & Roll inputs */}
-              <div className="w-full md:w-1/5 flex flex-col items-center md:items-start text-center md:text-left flex-shrink-0 md:border-r border-slate-200 dark:border-slate-800 md:pr-6">
-                <div className="w-full space-y-4">
-                  <div>
-                    <label className="block text-[8px] font-bold uppercase text-slate-450 dark:text-slate-500 tracking-wider mb-1">Student Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded-xl text-xs font-bold text-slate-850 dark:text-slate-200 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[8px] font-bold uppercase text-slate-450 dark:text-slate-500 tracking-wider mb-1">Roll Number</label>
-                    <input
-                      type="number"
-                      required
-                      value={formData.roll_no}
-                      onChange={(e) => setFormData({ ...formData, roll_no: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded-xl text-xs font-mono font-bold text-slate-850 dark:text-slate-200 transition-all"
-                    />
-                  </div>
+            <div className="space-y-6 animate-fade-in">
+              {/* Student Name & Roll Number Inputs at the Top */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 bg-slate-50/30 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-450 dark:text-slate-500 tracking-wider mb-1.5">Student Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded-xl text-xs font-bold text-slate-850 dark:text-slate-200 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-450 dark:text-slate-500 tracking-wider mb-1.5">Roll Number</label>
+                  <input
+                    type="number"
+                    required
+                    value={formData.roll_no}
+                    onChange={(e) => setFormData({ ...formData, roll_no: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:outline-none rounded-xl text-xs font-mono font-bold text-slate-850 dark:text-slate-200 transition-all"
+                  />
                 </div>
               </div>
 
-              {/* Right Column: Inline Editable Grid */}
-              <div className="flex-1 w-full space-y-6">
+              {/* Roster Evaluation Grid */}
+              <div className="space-y-6">
                 {/* Main Evaluations */}
                 <div className="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 border-b border-slate-200 dark:border-slate-800/80 pb-2 mb-4">
@@ -720,16 +718,14 @@ export default function StudentDetailView({ studentId, onBack, token, onLogout }
         </span>
       </div>
 
-      {/* Profile Detail Grid */}
-      <div className="flex flex-col md:flex-row gap-8 items-start">
-        {/* Left Column: Student Details */}
-        <div className="w-full md:w-1/5 flex flex-col items-center md:items-start text-center md:text-left flex-shrink-0 md:border-r border-slate-200 dark:border-slate-800 md:pr-6">
-          <h3 className="text-2xl font-extrabold text-slate-850 dark:text-white tracking-tight">{student.name}</h3>
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-slate-500 mt-2">Roll No: #{student.roll_no}</p>
-        </div>
+      {/* Profile Header (Name & Roll No) */}
+      <div className="flex items-center justify-between mt-3 mb-8">
+        <h3 className="text-2xl md:text-3xl font-extrabold text-slate-850 dark:text-white tracking-tight">{student.name}</h3>
+        <span className="text-xl md:text-2xl font-bold text-slate-800 dark:text-slate-200">Roll No: #{student.roll_no}</span>
+      </div>
 
-        {/* Right Column: Database Fields / Academic Profile */}
-        <div className="flex-1 w-full space-y-6">
+      {/* Database Fields / Academic Profile */}
+      <div className="space-y-6">
           
           {/* Section 1: General & Main Evaluation */}
           <div className="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">
@@ -902,6 +898,5 @@ export default function StudentDetailView({ studentId, onBack, token, onLogout }
 
         </div>
       </div>
-    </div>
   );
 }
