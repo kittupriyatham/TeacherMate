@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE } from '../config';
-import AttendanceView from './AttendanceView';
+
 
 export default function StudentTable({ comboId, onStudentClick, token, onLogout }) {
   const [students, setStudents] = useState([]);
@@ -105,11 +105,8 @@ export default function StudentTable({ comboId, onStudentClick, token, onLogout 
       });
   };
 
-  const [viewMode, setViewMode] = useState('roster'); // 'roster' or 'attendance'
-
   useEffect(() => {
     fetchStudents();
-    setViewMode('roster');
   }, [comboId]);
 
   const handleDelete = (e, id) => {
@@ -347,16 +344,7 @@ export default function StudentTable({ comboId, onStudentClick, token, onLogout 
     );
   };
 
-  if (viewMode === 'attendance') {
-    return (
-      <AttendanceView
-        comboId={comboId}
-        token={token}
-        onLogout={onLogout}
-        onBack={() => setViewMode('roster')}
-      />
-    );
-  }
+
 
   return (
     <div className="space-y-6">
@@ -370,31 +358,7 @@ export default function StudentTable({ comboId, onStudentClick, token, onLogout 
         </div>
         
         <div className="flex items-center gap-3 self-end sm:self-auto">
-          {/* View Selector Toggle */}
-          <div className="flex bg-slate-100 dark:bg-slate-850 p-1 rounded-xl border border-slate-200 dark:border-slate-800/85">
-            <button
-              type="button"
-              onClick={() => setViewMode('roster')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewMode === 'roster'
-                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200/50 dark:border-slate-800/50'
-                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-              }`}
-            >
-              📋 Roster
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('attendance')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewMode === 'attendance'
-                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200/50 dark:border-slate-800/50'
-                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-              }`}
-            >
-              📅 Attendance
-            </button>
-          </div>
+
 
           <button
             onClick={openAddModal}
